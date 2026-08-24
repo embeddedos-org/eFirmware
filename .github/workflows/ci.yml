@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: MIT
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }} / ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        build_type: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }} --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config ${{ matrix.build_type }} --output-on-failure
+
+  sanitizers:
+    name: ASan + UBSan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with sanitizers
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DEFW_SANITIZE=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  round-trip:
+    name: efwtool round trip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+      - name: Pack, inspect, verify, and confirm tampering is caught
+        run: |
+          set -euo pipefail
+          head -c 65536 /dev/urandom > payload.bin
+          ./build/tools/efwtool/efwtool pack payload.bin fw.img \
+            --load 0x08010000 --entry 0x08010100 --version 1.2.3
+          ./build/tools/efwtool/efwtool inspect fw.img
+          ./build/tools/efwtool/efwtool verify fw.img
+
+          # The digest efwtool records must match an independent implementation.
+          want=$(sha256sum payload.bin | cut -d' ' -f1)
+          got=$(./build/tools/efwtool/efwtool inspect fw.img \
+                  | awk '/^sha256/ {print $2}')
+          [ "$want" = "$got" ] || { echo "digest mismatch: $got != $want"; exit 1; }
+
+          # A single flipped bit must be rejected.
+          cp fw.img bad.img
+          printf '\xFF' | dd of=bad.img bs=1 seek=200 count=1 conv=notrunc
+          if ./build/tools/efwtool/efwtool verify bad.img; then
+            echo "tampered image was accepted"; exit 1
+          fi
+          echo "tampered image correctly rejected"

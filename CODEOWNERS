@@ -1,0 +1,8 @@
+# Default owners for everything in this repository.
+*       @embeddedos-org/maintainers
+
+# Cryptographic and image-format code needs a second pair of eyes: a change
+# here can silently weaken integrity checking or break eBoot compatibility.
+/src/efw_sha256.c   @embeddedos-org/maintainers
+/src/efw_image.c    @embeddedos-org/maintainers
+/include/efw/       @embeddedos-org/maintainers
