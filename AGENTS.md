@@ -1,3 +1,37 @@
+# eFirmware Agent Guide
+
+This repository contains the C11 firmware image library and the `efwtool` host utility used to create and inspect containers consumed by eBoot. Keep changes compatible with the 156-byte image format documented in `README.md`; changes to that wire format require a corresponding eBoot update or an explicit compatibility decision.
+
+## Repository layout
+
+- `include/efw/`: public C API and image-format types.
+- `src/`: SHA-256, CRC-32, and image container implementation.
+- `tools/efwtool/`: host-side `pack`, `inspect`, and `verify` CLI.
+- `tests/`: dependency-free CTest executables for hashes, images, and ABI layout.
+- `.github/workflows/ci.yml`: Linux, macOS, Windows, sanitizer, and round-trip CI.
+
+## Build and validate
+
+Use the documented host build from the repository root:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DEFW_SANITIZE=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+For a release-equivalent build, omit `-DEFW_SANITIZE=ON` and select `Release`. The project has no external library dependencies. Host tests are enabled by default; warnings are errors by default. There is no separate formatter or linter command in the current manifests, so do not invent one.
+
+## Change expectations
+
+- Add a test that fails against the broken behavior before changing implementation logic.
+- Preserve C11 compatibility, SPDX headers, warning-free builds, and Doxygen documentation for public functions.
+- Treat changes to `src/efw_sha256.c`, `src/efw_image.c`, `include/efw/`, parsing, digest comparisons, field widths, and status-code values as security-review triggers.
+- Report exploitable defects privately as directed by `SECURITY.md`; do not open a public issue.
+- Keep pull requests focused, document validation, and link a real issue from this repository with a closing keyword.
+
+## Existing collaboration model
+
 # Agent Responsibilities
 
 Planner
