@@ -74,3 +74,27 @@ jobs:
             echo "tampered image was accepted"; exit 1
           fi
           echo "tampered image correctly rejected"
+
+  stm32f4-example:
+    name: STM32F4 example pack round-trip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build efwtool
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target efwtool --parallel
+      - name: Pack with STM32F4 defaults and verify
+        run: |
+          set -euo pipefail
+          chmod +x examples/stm32f4/pack-stm32f4.sh
+          head -c 65536 /dev/urandom > payload.bin
+          EFWTOOL="$PWD/build/tools/efwtool/efwtool" \
+            ./examples/stm32f4/pack-stm32f4.sh payload.bin stm32f4.img \
+            --version 1.0.0
+          ./build/tools/efwtool/efwtool inspect stm32f4.img
+          ./build/tools/efwtool/efwtool verify stm32f4.img
+          # The image must target the STM32F4 application slot.
+          ./build/tools/efwtool/efwtool inspect stm32f4.img \
+            | grep -q "0x08010000" || { echo "unexpected load address"; exit 1; }
+          echo "STM32F4 pack round-trip OK"
