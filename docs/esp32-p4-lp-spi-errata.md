@@ -26,11 +26,27 @@ timing problem and wastes a board spin of debugging.
 
 ## Workarounds (if stuck on IDF ≤ 6.0.3)
 
-1. **Use MSB-first** where the peripheral allows it — the errata is
+1. **Use 3-wire (SIO) mode** — single bidirectional data line instead of
+   separate MOSI/MISO. This sidesteps the MISO sampling errata entirely
+   and is the preferred workaround where the peripheral supports it.
+2. **Use MSB-first** where the peripheral allows it — the errata is
    specific to LSB-first ordering.
-2. **Use half-duplex** transactions — the errata is specific to full-duplex.
-3. **Use SPI2/SPI3** instead of LP-SPI when power budget allows.
-4. **Upgrade to IDF v6.1+** — the real fix.
+3. **Use half-duplex** transactions — the errata is specific to full-duplex.
+4. **Use SPI2/SPI3** instead of LP-SPI when power budget allows.
+5. **Upgrade to IDF v6.1+** — the real fix.
+
+If none of the above is possible, the remaining option is to **accept
+stale/zero MISO** on affected transfers — but do it explicitly: document
+which transfers are affected and what the stale data corrupts, rather
+than discovering it on the bench.
+
+## Update 2026-10-05 — v6.1 released, backport TBD
+
+ESP-IDF **v6.1 is released** with the LP-SPI driver fix (the workaround
+for the silicon behavior). The "Affected" range above (v6.0–v6.0.3)
+stands; whether the fix is backported to the 6.0.x line is still TBD —
+until a backported 6.0.x exists, treat all of 6.0.x as affected. v6.1
+also carries the ESP32-S31 preview (see eCAD silicon catalog).
 
 ## eFirmware implications
 
