@@ -47,3 +47,22 @@ For eFirmware bring-up this means:
 New Espressif bring-up starts at **ESP-IDF v6.1**. v5.2 went end-of-life
 in August 2026; v6.0.x carries the LP-SPI MISO bug. Pin v6.1 in
 bring-up docs and CI.
+
+## v6.1-rc1 notes (2026-10)
+
+From the v6.1 release candidate notes and early bring-up:
+
+- **ESP32-S31 preview support.** The S31 is a preview target in v6.1
+  (`CONFIG_IDF_TARGET_ESP32S31` with preview targets enabled); esp-rs
+  already has a basic HAL. eos tracks it as
+  `boards/generic-esp32s31.yaml` (preview, conservative specs).
+- **OWE-Only SoftAP** — opportunistic-wireless-encryption-only AP mode.
+- **DPP multi-config** and **Wi-Fi Aware pairing for iOS**.
+- **Runtime sleep-retention attach/detach.**
+- **`CONFIG_SPIRAM_ENC_EXEMPT`** — unencrypted PSRAM carve-out; note
+  for the threat model: exempt regions must never hold keys or
+  PII-adjacent buffers.
+- **JPEG decoder bad-picture fix (GHSA-v6r2-f6p2-88cj).** Logged as a
+  CVE-watch datapoint for the monthly device-CVE series (embeddedos-stack
+  `docs/kev-gate.md`): a decoder bug class worth watching across
+  camera-adjacent firmware.
