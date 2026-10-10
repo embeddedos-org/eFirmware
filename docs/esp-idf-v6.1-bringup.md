@@ -48,9 +48,12 @@ New Espressif bring-up starts at **ESP-IDF v6.1**. v5.2 went end-of-life
 in August 2026; v6.0.x carries the LP-SPI MISO bug. Pin v6.1 in
 bring-up docs and CI.
 
-## v6.1-rc1 notes (2026-10)
+## v6.1 release notes (2026-10)
 
-From the v6.1 release candidate notes and early bring-up:
+ESP-IDF v6.1 is **final** (tag `v6.1` shipped; the earlier "rc1" label in
+this document's history referred to the pre-release verification build —
+the P4 Wi-Fi verification cited above was run on v6.1-rc1 and holds on
+final). From the v6.1 release notes and early bring-up:
 
 - **ESP32-S31 preview support.** The S31 is a preview target in v6.1
   (`CONFIG_IDF_TARGET_ESP32S31` with preview targets enabled); esp-rs
@@ -66,3 +69,13 @@ From the v6.1 release candidate notes and early bring-up:
   CVE-watch datapoint for the monthly device-CVE series (embeddedos-stack
   `docs/kev-gate.md`): a decoder bug class worth watching across
   camera-adjacent firmware.
+
+## S31 gotcha: v6.1.0 dual-core cache fault (Espressif #18948)
+
+On ESP-IDF v6.1.0, S31 dual-core bring-up hits a layout-sensitive
+"Cache access error" (MCAUSE 0x19): the parked core leaves branch
+prediction enabled while the other core accesses flash. Community
+workaround: disable branch prediction on the parked core until
+Espressif ships the fix. Any EoS dual-core S31 bring-up must carry
+this workaround. (eos records the same errata in
+`boards/generic-esp32s31.yaml`.)
