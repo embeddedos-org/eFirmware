@@ -1,0 +1,76 @@
+# Machine-readable board geometry: Nuvoton NuMaker-GestureAI-M55M1
+#
+# Mirrors docs/board-profiles/numaker-gestureai-m55m1.md. Offsets are byte
+# offsets into the 2 MiB internal flash. Slot layout is the eFirmware
+# proposal for this geometry (not a vendor layout).
+
+board: numaker-gestureai-m55m1
+vendor: Nuvoton
+mcu: M55M1R2LJAE
+
+cpu:
+  core: Cortex-M55
+  freq_mhz: 220
+  features: [Helium MVE, TrustZone, FPU-double]
+
+npu:
+  model: Ethos-U55
+  freq_mhz: 220
+  throughput_gops: 111
+
+memory:
+  sram_bytes: 1572864        # 1.5 MiB
+  flash_bytes: 2097152       # 2 MiB
+
+flash:
+  geometry: internal-aprom
+  note: "Offsets are relative to flash start; exact APROM alias base and erase granularity unverified — confirm against the M55M1 datasheet."
+  regions:
+    - name: eboot_secure_loader
+      offset: 0x00000000
+      size: 0x00020000        # 128 KiB
+      trustzone: secure
+    - name: slot_a
+      offset: 0x00020000
+      size: 0x000D0000        # 832 KiB
+      trustzone: non-secure
+      image: efw_image
+    - name: slot_b
+      offset: 0x000F0000
+      size: 0x000D0000        # 832 KiB
+      trustzone: non-secure
+      image: efw_image
+    - name: update_state
+      offset: 0x001C0000
+      size: 0x00040000        # 256 KiB
+      trustzone: mixed       # first 16 KiB secure (slot-active flag, trial counter)
+      holds: [slot_active_flag, trial_boot_counter, model_manifest]
+
+sram_partition_proposal:
+  secure_bytes: 524288       # 512 KiB — secure services, keys, Ethos-U55 cmd buffers
+  non_secure_bytes: 1048576  # 1 MiB — app heap, camera frames, TFLM arena
+
+security:
+  trustzone: true
+  psa_certification: "PSA Certified Level 2"
+  secure_boot: required
+  secure_boot_note: "Provision via Nuvoton BSP flow — key-provisioning steps unverified."
+
+model_slot:
+  medium: microSD
+  filesystem: FAT
+  naming: "<model-name>-<target>.efwmodel"
+  manifest_location: update_state
+  integrity: "sha256 per manifest entry; fail-closed on mismatch"
+  load_target: "SRAM (HyperRAM unconfirmed on this module — verify before sizing)"
+
+peripherals:
+  camera: GC0308 VGA CMOS
+  microphone: digital mic (PDM/DMIC)
+  usb: HSUSB Type-C
+  debug: ICE header
+  uart: UART5 (inference data out, [AA][ID][x y w h][55][CC] packets)
+  i2c: I2C1 header
+  buttons: [reset, user]
+  led: user LED
+  power: 5V via USB-C
