@@ -59,5 +59,7 @@ Arduino, Zephyr) — the eFirmware calls are platform-independent.
   attach a signature with `efw_image_attach_signature()` and check
   `EFW_IMG_FLAG_SIGNED` plus the signature with your own key material
   before booting.
-- The header is little-endian and byte-compatible with eBoot's
-  `eos_image_header_t`, so eBoot consumes the image without translation.
+- The header is little-endian and uses the same field offsets as eBoot's
+  `eos_image_header_t` (version 1). eBoot boots only Ed25519-signed images, so
+  an unsigned image from `efwtool pack` is refused; sign it and attach the
+  signature as described in [Image format](../../README.md#image-format).

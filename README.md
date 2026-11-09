@@ -21,7 +21,7 @@ loads.
 |---|---|---|
 | `efw_sha256` — streaming SHA-256 (FIPS 180-4) | Working | 4 NIST vectors + streaming-equivalence and padding-boundary tests |
 | `efw_crc32` — CRC-32/ISO-HDLC | Working | Published check values + chunk-boundary independence |
-| `efw_image` — 156-byte container, byte-compatible with eBoot | Working | Round-trip, per-bit tamper detection, malformed-header rejection |
+| `efw_image` — 156-byte container, header version 1 with the same field offsets as eBoot's header (eBoot accepts it only when Ed25519-signed; see [Image format](#image-format)) | Working | Round-trip, per-bit tamper detection, malformed-header rejection |
 | `efwtool` — `pack` / `inspect` / `verify` | Working | End-to-end round trip in CI, cross-checked against `sha256sum` |
 | Update agent, transports, board bring-up | **Not started** | — |
 
@@ -67,9 +67,28 @@ malformed header, so it can gate a release step directly.
 ## Image format
 
 An image file is a 156-byte little-endian header followed by the payload. The
-layout is byte-compatible with `eos_image_header_t` in
-`eBoot/include/eos_image.h`, so eBoot's `eos_image_parse_header()` consumes it
-without translation.
+field offsets match `eos_image_header_t` in `eBoot/include/eos_image.h`, and
+eBoot's `eos_image_parse_header()` accepts header version 1. What works
+between the two today:
+
+- **eBoot refuses an image that `efwtool pack` makes.** It has no signature
+  (`sig_type` 0), and eBoot's `eos_image_verify_signature()` refuses every image
+  that is not Ed25519-signed, with `EOS_ERR_SIGNATURE` (-4).
+- **An Ed25519-signed eFirmware image passes eBoot's image checks** (header
+  parse, payload integrity, signature). eFirmware does not sign (see
+  [What this does not do](#what-this-does-not-do)), but you can sign outside
+  and attach the signature with `efw_image_attach_signature()`.
+  eBoot verifies the signature over header bytes 0..91, so those bytes must
+  be final when you sign: attach a 64-byte placeholder first, which sets
+  `sig_type` 3, `sig_len` 64 and `EFW_IMG_FLAG_SIGNED`, serialise, then sign the
+  first 92 bytes and attach the real signature. The key must be one the eBoot
+  build trusts.
+- **eFirmware cannot read an eBoot-signed image.** eBoot's header is now
+  version 2 (`EOS_IMAGE_HDR_VERSION 2`), which its signing tool
+  `tools/sign_image.py` writes. Version 2 puts `tlv_len` and `tlv_hash` in
+  the 30 bytes this format keeps as `reserved`, and signs the whole header
+  prefix. `efw_image_parse()` accepts version 1 only, so `efwtool inspect` and
+  `efwtool verify` reject such an image with `ERR_VERSION`.
 
 | Offset | Size | Field | Notes |
 |---|---|---|---|
