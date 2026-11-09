@@ -62,9 +62,32 @@ static int read_file(const char *path, uint8_t **buf, size_t *len)
 static int parse_version(const char *s, uint32_t *out)
 {
     unsigned major = 0, minor = 0, patch = 0;
-    if (sscanf(s, "%u.%u.%u", &major, &minor, &patch) != 3) return -1;
+    int end = 0;
+    /* %n records how far the scan got, so trailing text ("1.2.3x",
+     * "1.2.3.4") is rejected instead of silently dropped. */
+    if (sscanf(s, "%u.%u.%u%n", &major, &minor, &patch, &end) != 3) return -1;
+    if (s[end] != '\0') return -1;
     if (major > 0xFFu || minor > 0xFFu || patch > 0xFFFFu) return -1;
     *out = EFW_VERSION_MAKE(major, minor, patch);
+    return 0;
+}
+
+/* Parse a 32-bit header field (--load, --entry, --flags) as decimal, 0x hex
+ * or leading-0 octal. The whole argument must be one number that fits in 32
+ * bits: anything else (empty, a sign or space before or after it, trailing
+ * text, a bare "0x", "08", more than 32 bits) is refused rather than
+ * truncated or partly parsed into a wrong header field. */
+static int parse_u32(const char *s, uint32_t *out)
+{
+    unsigned long long v;
+    char *end = NULL;
+
+    if (*s < '0' || *s > '9') return -1;
+    errno = 0;
+    v = strtoull(s, &end, 0);
+    if (errno != 0 || *end != '\0') return -1;
+    if (v > 0xFFFFFFFFull) return -1;
+    *out = (uint32_t)v;
     return 0;
 }
 
@@ -97,14 +120,23 @@ static int cmd_pack(int argc, char **argv)
 
     for (i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--load") == 0 && i + 1 < argc) {
-            p.load_addr = (uint32_t)strtoul(argv[++i], NULL, 0);
+            if (parse_u32(argv[++i], &p.load_addr) != 0) {
+                fprintf(stderr, "efwtool: bad --load '%s', expected a 32-bit number\n", argv[i]);
+                return 2;
+            }
         } else if (strcmp(argv[i], "--entry") == 0 && i + 1 < argc) {
-            p.entry_addr = (uint32_t)strtoul(argv[++i], NULL, 0);
+            if (parse_u32(argv[++i], &p.entry_addr) != 0) {
+                fprintf(stderr, "efwtool: bad --entry '%s', expected a 32-bit number\n", argv[i]);
+                return 2;
+            }
         } else if (strcmp(argv[i], "--flags") == 0 && i + 1 < argc) {
-            p.flags = (uint32_t)strtoul(argv[++i], NULL, 0);
+            if (parse_u32(argv[++i], &p.flags) != 0) {
+                fprintf(stderr, "efwtool: bad --flags '%s', expected a 32-bit number\n", argv[i]);
+                return 2;
+            }
         } else if (strcmp(argv[i], "--version") == 0 && i + 1 < argc) {
             if (parse_version(argv[++i], &p.image_version) != 0) {
-                fprintf(stderr, "efwtool: bad --version, expected M.m.p\n");
+                fprintf(stderr, "efwtool: bad --version '%s', expected M.m.p\n", argv[i]);
                 return 2;
             }
         } else {

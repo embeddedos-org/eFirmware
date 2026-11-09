@@ -22,6 +22,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and an end-to-end round trip that cross-checks the recorded digest against
   `sha256sum` and confirms a tampered image is rejected.
 
+### Fixed
+
+- `efwtool pack` now refuses a malformed `--load`, `--entry`, `--flags` or
+  `--version` value and exits 2 without writing an image. It used to keep the
+  parsed prefix or truncate the value, and wrote an image with a wrong header
+  field. `--load`, `--entry` and `--flags` must now be a single decimal, `0x`
+  hex or leading-`0` octal number that fits in 32 bits; values that were
+  accepted before and are now refused include trailing text (`0x0801000G`),
+  more than 32 bits, a sign (`-1`, `+5`), spaces before or after the number,
+  a bare `0x` (was 0) and `08`/`09` (were 0). `--version` must be exactly
+  `M.m.p` (`1.2.3x` and `1.2.3.4` were read as 1.2.3).
+
 ### Not yet implemented
 
 Signature generation and verification, the device-side update agent,
