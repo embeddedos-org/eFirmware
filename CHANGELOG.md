@@ -33,6 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   more than 32 bits, a sign (`-1`, `+5`), spaces before or after the number,
   a bare `0x` (was 0) and `08`/`09` (were 0). `--version` must be exactly
   `M.m.p` (`1.2.3x` and `1.2.3.4` were read as 1.2.3).
+- `efwtool inspect` and `efwtool verify` now open an image made from the
+  largest payload `efwtool pack` accepts (64 MiB). They applied the 64 MiB
+  limit to the whole file, header included, so an image whose payload was
+  within 155 bytes of the limit was packed but then refused as too large.
 
 ### Not yet implemented
 
