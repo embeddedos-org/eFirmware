@@ -21,9 +21,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EFW_TOOL_MAX_IMAGE (64u * 1024u * 1024u)
+/* The largest payload `pack` accepts. An image file is the header plus its
+ * payload, so `inspect` and `verify` must accept a file that much bigger. */
+#define EFW_TOOL_MAX_PAYLOAD (64u * 1024u * 1024u)
+#define EFW_TOOL_MAX_IMAGE   (EFW_TOOL_MAX_PAYLOAD + EFW_IMAGE_HDR_SIZE)
 
-static int read_file(const char *path, uint8_t **buf, size_t *len)
+static int read_file(const char *path, unsigned long max_size,
+                     uint8_t **buf, size_t *len)
 {
     FILE *f = fopen(path, "rb");
     long size;
@@ -37,9 +41,9 @@ static int read_file(const char *path, uint8_t **buf, size_t *len)
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size = ftell(f);
     if (size < 0) { fclose(f); return -1; }
-    if ((unsigned long)size > EFW_TOOL_MAX_IMAGE) {
-        fprintf(stderr, "efwtool: %s is larger than the %u byte limit\n",
-                path, EFW_TOOL_MAX_IMAGE);
+    if ((unsigned long)size > max_size) {
+        fprintf(stderr, "efwtool: %s is larger than the %lu byte limit\n",
+                path, max_size);
         fclose(f);
         return -1;
     }
@@ -145,7 +149,8 @@ static int cmd_pack(int argc, char **argv)
         }
     }
 
-    if (read_file(in, &payload, &payload_len) != 0) return 1;
+    if (read_file(in, EFW_TOOL_MAX_PAYLOAD, &payload, &payload_len) != 0)
+        return 1;
 
     rc = efw_image_build(&p, payload, payload_len, &h);
     if (rc != EFW_OK) {
@@ -185,7 +190,7 @@ static int load_image(const char *path, uint8_t **raw, size_t *raw_len,
 {
     int rc;
 
-    if (read_file(path, raw, raw_len) != 0) return 1;
+    if (read_file(path, EFW_TOOL_MAX_IMAGE, raw, raw_len) != 0) return 1;
     rc = efw_image_parse(*raw, *raw_len, h);
     if (rc != EFW_OK) {
         fprintf(stderr, "efwtool: %s is not a valid image: %s\n",

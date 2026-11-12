@@ -44,4 +44,12 @@ if(TARGET efwtool)
                          -DOUT=${CMAKE_CURRENT_BINARY_DIR}/efwtool_rejects_${_name}.img
                          -DEXPECT=reject -DOPT=${_opt} "-DVAL=${_val}" -P ${_efw_cli})
     endforeach()
+
+    # An image built from the largest payload pack accepts must also be
+    # accepted by inspect and verify.
+    add_test(NAME efwtool_max_size_payload_round_trip
+             COMMAND ${CMAKE_COMMAND}
+                     -DEFWTOOL=$<TARGET_FILE:efwtool>
+                     -DWORKDIR=${CMAKE_CURRENT_BINARY_DIR}
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/efwtool_max_size.cmake)
 endif()
