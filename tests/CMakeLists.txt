@@ -9,6 +9,15 @@ foreach(_t sha256 crc32 image abi)
     add_test(NAME efw_${_t} COMMAND efw_test_${_t})
 endforeach()
 
+# examples/esp32s3/verify_esp32s3.c built on the host against stand-ins for
+# the ESP-IDF calls it makes, so the example keeps compiling against the real
+# prototypes and keeps releasing its flash mapping with the right handle.
+add_executable(efw_test_example_esp32s3 test_example_esp32s3.c)
+target_link_libraries(efw_test_example_esp32s3 PRIVATE efw)
+target_include_directories(efw_test_example_esp32s3 PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/esp_idf_stub)
+add_test(NAME efw_example_esp32s3 COMMAND efw_test_example_esp32s3)
+
 # efwtool command-line checks. A malformed --load/--entry/--flags/--version
 # must be refused with exit code 2 and no image written, not truncated or
 # partly parsed into a wrong header field. efwtool_cli.cmake checks the exit

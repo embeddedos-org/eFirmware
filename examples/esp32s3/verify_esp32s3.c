@@ -15,6 +15,11 @@
 #include "esp_partition.h"
 #include "spi_flash_mmap.h"
 
+/* spi_flash_mmap() stores the mapping handle through its last argument, and
+ * spi_flash_munmap() releases the mapping by that handle, not by the mapped
+ * pointer. One mapping is live at a time, so a static is enough here. */
+static spi_flash_mmap_handle_t flash_handle;
+
 static const uint8_t *flash_map(size_t *out_len) {
     const esp_partition_t *part =
         esp_partition_find_first(ESP_PARTITION_TYPE_APP,
@@ -22,14 +27,15 @@ static const uint8_t *flash_map(size_t *out_len) {
     if (!part) return NULL;
     const void *ptr = NULL;
     if (spi_flash_mmap(part->address, part->size,
-                       SPI_FLASH_MMAP_DATA, &ptr, NULL) != ESP_OK)
+                       SPI_FLASH_MMAP_DATA, &ptr, &flash_handle) != ESP_OK)
         return NULL;
     *out_len = part->size;
     return (const uint8_t *)ptr;
 }
 
 static void flash_unmap(const uint8_t *ptr) {
-    spi_flash_munmap(ptr);
+    (void)ptr;
+    spi_flash_munmap(flash_handle);
 }
 /* --- end platform glue ------------------------------------------------- */
 

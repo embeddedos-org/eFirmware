@@ -37,6 +37,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   largest payload `efwtool pack` accepts (64 MiB). They applied the 64 MiB
   limit to the whole file, header included, so an image whose payload was
   within 155 bytes of the limit was packed but then refused as too large.
+- `examples/esp32s3/verify_esp32s3.c` now keeps the handle that
+  `spi_flash_mmap()` returns and passes it to `spi_flash_munmap()`. It passed
+  `NULL` for the handle, which ESP-IDF writes through, and then passed the
+  mapped pointer to `spi_flash_munmap()`, which takes the handle, so the
+  example did not compile against ESP-IDF's prototypes. A new
+  `efw_example_esp32s3` test builds the example on the host against
+  stand-ins for those calls.
 
 ### Not yet implemented
 
