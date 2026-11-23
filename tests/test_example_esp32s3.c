@@ -105,5 +105,17 @@ int main(void)
     EFW_CHECK_EQ_INT(maps_live, 0);
     EFW_CHECK_EQ_INT(bad_unmaps, 0);
 
+    /* An image_size larger than the partition is refused before the payload is
+     * hashed. UINT32_MAX is the case the old `EFW_IMAGE_HDR_SIZE + payload_len`
+     * form let through on a 32-bit target, where that sum wraps to 155. */
+    write_image(payload, sizeof(payload));
+    flash_part[8]  = 0xFFu;
+    flash_part[9]  = 0xFFu;
+    flash_part[10] = 0xFFu;
+    flash_part[11] = 0xFFu;
+    EFW_CHECK_EQ_INT(verify_esp32s3_image(), -1);
+    EFW_CHECK_EQ_INT(maps_live, 0);
+    EFW_CHECK_EQ_INT(bad_unmaps, 0);
+
     EFW_TEST_REPORT("example_esp32s3");
 }

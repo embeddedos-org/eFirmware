@@ -59,7 +59,12 @@ int verify_esp32s3_image(void) {
 
     const uint8_t *payload = flash + EFW_IMAGE_HDR_SIZE;
     size_t payload_len = (size_t)hdr.image_size;
-    if (EFW_IMAGE_HDR_SIZE + payload_len > flash_len) {
+    /* Subtract rather than add: image_size is attacker-controlled up to
+     * UINT32_MAX, and on a 32-bit target EFW_IMAGE_HDR_SIZE + payload_len
+     * wraps, so the sum form lets an over-long image pass this check.
+     * efw_image_parse() already required flash_len >= EFW_IMAGE_HDR_SIZE,
+     * so the subtraction below cannot underflow. */
+    if (payload_len > flash_len - EFW_IMAGE_HDR_SIZE) {
         printf("efw: image overruns partition\n");
         flash_unmap(flash);
         return -1;
