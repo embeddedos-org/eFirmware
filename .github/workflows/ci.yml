@@ -29,7 +29,12 @@ jobs:
         run: cmake --build build --config ${{ matrix.build_type }} --parallel
 
       - name: Test
-        run: ctest --test-dir build --build-config ${{ matrix.build_type }} --output-on-failure
+        # --no-tests=error: ctest exits 0 when it finds no tests at all, so
+        # without this an empty test set reports the same green as a passing
+        # suite. Required by CLAUDE.md for every ctest invocation.
+        run: >-
+          ctest --test-dir build --build-config ${{ matrix.build_type }}
+          --output-on-failure --no-tests=error
 
   sanitizers:
     name: ASan + UBSan
@@ -41,7 +46,8 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        # See the note in build-and-test: an empty test set must fail, not pass.
+        run: ctest --test-dir build --output-on-failure --no-tests=error
 
   round-trip:
     name: efwtool round trip
