@@ -24,6 +24,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Both `ctest` invocations in CI now pass `--no-tests=error`. `ctest` exits 0
+  when it finds no tests at all, so the six `build-and-test` matrix legs and
+  the ASan/UBSan job reported the same green for "the suite passed" and for
+  "there was no suite to run". The sibling repos already set the flag.
 - `examples/stm32f4/verify_stm32f4.c` and `examples/esp32s3/verify_esp32s3.c`
   now bound the payload with `image_size > flash_len - EFW_IMAGE_HDR_SIZE`
   instead of `EFW_IMAGE_HDR_SIZE + image_size > flash_len`. On the 32-bit
