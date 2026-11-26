@@ -14,9 +14,17 @@
 #include "efw/efw_image.h"
 
 /* --- platform glue (STM32F4 memory-mapped flash) ---------------------- */
+/* Overridable so a host test can point the "flash" at a buffer it owns; the
+ * defaults are the real STM32F4 addresses and are what a device build uses. */
+#ifndef STM32F4_FLASH_BASE
 #define STM32F4_FLASH_BASE  0x08000000u
+#endif
+#ifndef STM32F4_APP_OFFSET
 #define STM32F4_APP_OFFSET  0x00010000u  /* first 64 KiB reserved for eBoot */
+#endif
+#ifndef STM32F4_APP_MAX_LEN
 #define STM32F4_APP_MAX_LEN 0x00070000u  /* app slot: 448 KiB (512 KiB part) */
+#endif
 
 static const uint8_t *flash_map(size_t *out_len) {
     *out_len = STM32F4_APP_MAX_LEN;
@@ -48,7 +56,12 @@ int verify_stm32f4_image(void) {
 
     const uint8_t *payload = flash + EFW_IMAGE_HDR_SIZE;
     size_t payload_len = (size_t)hdr.image_size;
-    if (EFW_IMAGE_HDR_SIZE + payload_len > flash_len) {
+    /* Subtract rather than add: image_size is attacker-controlled up to
+     * UINT32_MAX, and on a 32-bit target EFW_IMAGE_HDR_SIZE + payload_len
+     * wraps, so the sum form lets an over-long image pass this check.
+     * efw_image_parse() already required flash_len >= EFW_IMAGE_HDR_SIZE,
+     * so the subtraction below cannot underflow. */
+    if (payload_len > flash_len - EFW_IMAGE_HDR_SIZE) {
         printf("efw: image overruns application slot\n");
         flash_unmap(flash);
         return -1;

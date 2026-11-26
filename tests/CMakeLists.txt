@@ -18,6 +18,15 @@ target_include_directories(efw_test_example_esp32s3 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/esp_idf_stub)
 add_test(NAME efw_example_esp32s3 COMMAND efw_test_example_esp32s3)
 
+# examples/stm32f4/verify_stm32f4.c built on the host with its memory-mapped
+# flash pointed at a buffer the test owns, so the example's length check is
+# exercised instead of only compiled.
+add_executable(efw_test_example_stm32f4 test_example_stm32f4.c)
+target_link_libraries(efw_test_example_stm32f4 PRIVATE efw)
+target_include_directories(efw_test_example_stm32f4 PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR})
+add_test(NAME efw_example_stm32f4 COMMAND efw_test_example_stm32f4)
+
 # efwtool command-line checks. A malformed --load/--entry/--flags/--version
 # must be refused with exit code 2 and no image written, not truncated or
 # partly parsed into a wrong header field. efwtool_cli.cmake checks the exit
