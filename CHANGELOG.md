@@ -24,6 +24,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `examples/stm32f4/verify_stm32f4.c` and `examples/esp32s3/verify_esp32s3.c`
+  now bound the payload with `image_size > flash_len - EFW_IMAGE_HDR_SIZE`
+  instead of `EFW_IMAGE_HDR_SIZE + image_size > flash_len`. On the 32-bit
+  targets these examples are written for, that sum is evaluated in 32-bit
+  arithmetic and wraps: an `image_size` of `0xFFFFFFFF` summed to 155, compared
+  as "fits", and `efw_image_verify()` then hashed 4 GiB from 156 bytes into the
+  slot — a 4 GiB out-of-bounds read in the pre-boot path, reached before any
+  authenticity decision, so a corrupt or hostile image in the slot was enough
+  to trigger it. `efw_image_parse()` has already required
+  `flash_len >= EFW_IMAGE_HDR_SIZE` by that point, so the subtraction cannot
+  underflow. A new `efw_example_stm32f4` test builds the example on the host
+  against a buffer it owns; because a host `size_t` is 64-bit and so cannot
+  show the wrap by itself, the test also reproduces the old and new comparisons
+  in `uint32_t`.
 - `efwtool pack` now refuses a malformed `--load`, `--entry`, `--flags` or
   `--version` value and exits 2 without writing an image. It used to keep the
   parsed prefix or truncate the value, and wrote an image with a wrong header
